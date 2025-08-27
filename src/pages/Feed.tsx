@@ -1,21 +1,70 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useFeedStore } from '@/stores/useFeedStore';
 import { fetchNextCards } from '@/services/feed';
+import { SwipeDeck } from '@/components/SwipeDeck';
+import { MatchModal } from '@/components/MatchModal';
+import { BottomTabBar } from '@/components/BottomTabBar';
 import { Button } from '@/components/ui/button';
-import { Heart, X } from 'lucide-react';
+import { ProfileWithPet, Match } from '@/types';
+import { Undo2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const Feed = () => {
-  const { cards, currentIndex, setCards } = useFeedStore();
+  const { cards, currentIndex, setCards, lastAction, undoLastAction, clearLastAction } = useFeedStore();
+  const [currentMatch, setCurrentMatch] = useState<Match | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    fetchNextCards().then(setCards);
-  }, [setCards]);
+    if (cards.length === 0) {
+      fetchNextCards().then(setCards);
+    }
+  }, [cards.length, setCards]);
+
+  // Load more cards when running low
+  useEffect(() => {
+    if (cards.length - currentIndex <= 2) {
+      fetchNextCards(Math.floor(currentIndex / 10) + 1).then(newCards => {
+        if (newCards.length > 0) {
+          setCards([...cards, ...newCards]);
+        }
+      });
+    }
+  }, [currentIndex, cards, setCards]);
+
+  const handleLike = (profile: ProfileWithPet) => {
+    // Mock match logic - in real app, this would come from the API
+    const isMatch = Math.random() < 0.2; // 20% chance
+    if (isMatch) {
+      const match: Match = {
+        id: 'match-' + Date.now(),
+        userId1: 'current-user',
+        userId2: profile.user.id,
+        createdAt: new Date().toISOString(),
+        user1: profile.user, // In real app, get current user
+        user2: profile.user,
+      };
+      setCurrentMatch(match);
+    }
+  };
+
+  const handlePass = (profile: ProfileWithPet) => {
+    // Handle pass action if needed
+  };
+
+  const handleUndo = () => {
+    undoLastAction();
+    toast({
+      title: 'Undone',
+      description: `Undid your ${lastAction?.type}`,
+    });
+    clearLastAction();
+  };
 
   const currentCard = cards[currentIndex];
 
   if (!currentCard) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-2">No more profiles</h2>
           <p className="text-muted-foreground">Check back later for new matches!</p>
@@ -25,29 +74,41 @@ const Feed = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-sm mx-auto">
-        <div className="bg-card rounded-2xl shadow-lg p-6 mb-6">
-          <div className="mb-4">
-            <h3 className="text-xl font-semibold">{currentCard.user.displayName}, {currentCard.user.age}</h3>
-            <p className="text-muted-foreground">{currentCard.user.bio}</p>
-          </div>
-          
-          <div className="border-t pt-4">
-            <h4 className="text-lg font-medium mb-2">Meet {currentCard.pet.name}</h4>
-            <p className="text-muted-foreground">{currentCard.pet.bio}</p>
-          </div>
+    <div className="min-h-screen bg-background pb-16">
+      <div className="max-w-sm mx-auto space-y-4 p-4">
+        {/* Header with undo button */}
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Discover</h1>
+          {lastAction && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleUndo}
+              className="gap-2"
+            >
+              <Undo2 className="h-4 w-4" />
+              Undo {lastAction.type}
+            </Button>
+          )}
         </div>
 
-        <div className="flex justify-center gap-4">
-          <Button variant="outline" size="lg" className="rounded-full">
-            <X className="h-6 w-6" />
-          </Button>
-          <Button size="lg" className="rounded-full">
-            <Heart className="h-6 w-6" />
-          </Button>
-        </div>
+        {/* Swipe deck */}
+        <SwipeDeck
+          cards={cards}
+          currentIndex={currentIndex}
+          onLike={handleLike}
+          onPass={handlePass}
+        />
+
+        {/* Match modal */}
+        <MatchModal
+          match={currentMatch}
+          isOpen={!!currentMatch}
+          onClose={() => setCurrentMatch(null)}
+        />
       </div>
+
+      <BottomTabBar />
     </div>
   );
 };

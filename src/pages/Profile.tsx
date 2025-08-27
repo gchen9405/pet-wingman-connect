@@ -1,10 +1,14 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { TopNav } from '@/components/TopNav';
+import { BottomTabBar } from '@/components/BottomTabBar';
 
 const Profile = () => {
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-background pb-16">
+      <TopNav title="Profile" />
+      
+      <div className="p-4">
         <Card>
           <CardHeader>
             <CardTitle>Your Profile</CardTitle>
@@ -26,6 +30,8 @@ const Profile = () => {
           </CardContent>
         </Card>
       </div>
+
+      <BottomTabBar />
     </div>
   );
 };

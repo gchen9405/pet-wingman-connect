@@ -52,6 +52,18 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				like: {
+					DEFAULT: 'hsl(var(--like))',
+					foreground: 'hsl(var(--like-foreground))'
+				},
+				pass: {
+					DEFAULT: 'hsl(var(--pass))',
+					foreground: 'hsl(var(--pass-foreground))'
+				},
+				match: {
+					DEFAULT: 'hsl(var(--match))',
+					foreground: 'hsl(var(--match-foreground))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
