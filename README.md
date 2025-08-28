@@ -36,6 +36,109 @@ npm i
 npm run dev
 ```
 
+## Environment Configuration
+
+This project supports both mock mode and real Supabase integration.
+
+### Mock Mode (Default)
+
+For development without setting up Supabase:
+
+1. Copy the environment template:
+```sh
+cp env.example .env.local
+```
+
+2. Ensure mock mode is enabled in `.env.local`:
+```env
+VITE_USE_MOCKS=true
+```
+
+3. Start the development server:
+```sh
+npm run dev
+```
+
+The app will use mock data for all services, allowing you to develop and test the UI without a real backend.
+
+### Supabase Integration
+
+To connect to a real Supabase backend:
+
+1. Set up your Supabase project:
+   - Create a new project at [supabase.com](https://supabase.com)
+   - Run the SQL schema from `docs/schema.sql` in your Supabase SQL editor
+   - Set up the storage bucket for photos
+
+2. Configure environment variables in `.env.local`:
+```env
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key-here
+VITE_USE_MOCKS=false
+```
+
+3. Start the development server:
+```sh
+npm run dev
+```
+
+### Database Schema
+
+The complete database schema with tables, RLS policies, and functions is available in `docs/schema.sql`. This includes:
+
+- **profiles**: User profile information
+- **pets**: Pet profile information  
+- **photos**: User and pet photos with storage integration
+- **prompts**: Standard prompts for profiles
+- **prompt_answers**: User/pet responses to prompts
+- **likes**: User interactions and reciprocal like tracking
+- **matches**: Matched users from mutual likes
+
+All tables include Row Level Security (RLS) policies to ensure users can only access their own data and public profiles.
+
+### Testing
+
+Run the test suite:
+
+```sh
+# Run tests once
+npm run test:run
+
+# Run tests in watch mode
+npm run test
+
+# Run tests with UI
+npm run test:ui
+```
+
+Tests cover the critical like/match logic to ensure proper reciprocal matching and prevent duplicate likes.
+
+## App Features
+
+**Pet Wingman Connect** is a Hinge-style dating app with a unique twist - each profile has two sections:
+
+1. **Human Profile**: User's personal information, photos, and prompt responses
+2. **Pet Profile**: Their pet's information, photos, and personality prompts
+
+### Key Features
+
+- **Dual Profiles**: Both user and pet profiles on each card
+- **Smart Matching**: Reciprocal likes create matches automatically  
+- **Photo Management**: Upload and manage photos for both user and pet
+- **Prompt System**: Answer prompts for both user and pet personalities
+- **Real-time Feed**: Browse other users and their pets
+- **Like System**: Like specific prompts or profiles
+- **Match Management**: View and manage mutual matches
+
+### Architecture
+
+- **Frontend**: React + TypeScript + Tailwind CSS
+- **State Management**: Zustand stores for auth and feed state
+- **Backend**: Supabase with PostgreSQL and real-time subscriptions
+- **Storage**: Supabase Storage for photo uploads
+- **Authentication**: Supabase Auth with email/password
+- **Testing**: Vitest for unit and integration tests
+
 **Edit a file directly in GitHub**
 
 - Navigate to the desired file(s).

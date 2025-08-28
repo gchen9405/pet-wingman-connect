@@ -1,3 +1,4 @@
+// Updated types to match database schema
 export type Json =
   | string
   | number
@@ -14,7 +15,200 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          id: string
+          display_name: string
+          age: number | null
+          height: string | null
+          sexuality: string | null
+          bio: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          display_name: string
+          age?: number | null
+          height?: string | null
+          sexuality?: string | null
+          bio?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          display_name?: string
+          age?: number | null
+          height?: string | null
+          sexuality?: string | null
+          bio?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      pets: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          age: number | null
+          weight: string | null
+          breed: string | null
+          bio: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          age?: number | null
+          weight?: string | null
+          breed?: string | null
+          bio?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          age?: number | null
+          weight?: string | null
+          breed?: string | null
+          bio?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      prompts: {
+        Row: {
+          id: string
+          owner_type: 'human' | 'pet'
+          text: string
+          is_active: boolean | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          owner_type: 'human' | 'pet'
+          text: string
+          is_active?: boolean | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          owner_type?: 'human' | 'pet'
+          text?: string
+          is_active?: boolean | null
+          created_at?: string
+        }
+      }
+      prompt_answers: {
+        Row: {
+          id: string
+          owner_type: 'human' | 'pet'
+          owner_id: string
+          prompt_id: string
+          answer_text: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          owner_type: 'human' | 'pet'
+          owner_id: string
+          prompt_id: string
+          answer_text: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          owner_type?: 'human' | 'pet'
+          owner_id?: string
+          prompt_id?: string
+          answer_text?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      photos: {
+        Row: {
+          id: string
+          owner_type: 'human' | 'pet'
+          owner_id: string
+          path: string
+          is_primary: boolean | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          owner_type: 'human' | 'pet'
+          owner_id: string
+          path: string
+          is_primary?: boolean | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          owner_type?: 'human' | 'pet'
+          owner_id?: string
+          path?: string
+          is_primary?: boolean | null
+          created_at?: string
+        }
+      }
+      likes: {
+        Row: {
+          id: string
+          from_user_id: string
+          to_user_id: string
+          target_type: 'prompt' | 'profile'
+          target_id: string
+          message: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          from_user_id: string
+          to_user_id: string
+          target_type: 'prompt' | 'profile'
+          target_id: string
+          message?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          from_user_id?: string
+          to_user_id?: string
+          target_type?: 'prompt' | 'profile'
+          target_id?: string
+          message?: string | null
+          created_at?: string
+        }
+      }
+      matches: {
+        Row: {
+          id: string
+          user_a: string
+          user_b: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_a: string
+          user_b: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_a?: string
+          user_b?: string
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +217,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      owner_type_enum: 'human' | 'pet'
+      target_type_enum: 'prompt' | 'profile'
     }
     CompositeTypes: {
       [_ in never]: never
