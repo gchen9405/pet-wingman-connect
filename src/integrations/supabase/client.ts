@@ -14,3 +14,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   }
 });
+
+// Explicitly typed client for better type inference
+export type SupabaseClient = typeof supabase;

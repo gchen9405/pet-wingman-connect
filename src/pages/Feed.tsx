@@ -6,13 +6,33 @@ import { MatchModal } from '@/components/MatchModal';
 import { BottomTabBar } from '@/components/BottomTabBar';
 import { Button } from '@/components/ui/button';
 import { ProfileWithPet, Match } from '@/types';
-import { Undo2 } from 'lucide-react';
+import { Undo2, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { signOut } from '@/services/auth';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 const Feed = () => {
   const { cards, currentIndex, setCards, lastAction, undoLastAction, clearLastAction } = useFeedStore();
   const [currentMatch, setCurrentMatch] = useState<Match | null>(null);
   const { toast } = useToast();
+  const { clearAuth } = useAuthStore();
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (!error) {
+      clearAuth();
+      toast({
+        title: 'Signed out',
+        description: 'You have been signed out successfully',
+      });
+    } else {
+      toast({
+        title: 'Error',
+        description: 'Failed to sign out',
+        variant: 'destructive',
+      });
+    }
+  };
 
   useEffect(() => {
     if (cards.length === 0) {
@@ -76,20 +96,31 @@ const Feed = () => {
   return (
     <div className="min-h-screen bg-background pb-16">
       <div className="max-w-sm mx-auto space-y-4 p-4">
-        {/* Header with undo button */}
+        {/* Header with undo and sign out buttons */}
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Discover</h1>
-          {lastAction && (
+          <div className="flex gap-2">
+            {lastAction && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleUndo}
+                className="gap-2"
+              >
+                <Undo2 className="h-4 w-4" />
+                Undo {lastAction.type}
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
-              onClick={handleUndo}
+              onClick={handleSignOut}
               className="gap-2"
             >
-              <Undo2 className="h-4 w-4" />
-              Undo {lastAction.type}
+              <LogOut className="h-4 w-4" />
+              Sign Out
             </Button>
-          )}
+          </div>
         </div>
 
         {/* Swipe deck */}

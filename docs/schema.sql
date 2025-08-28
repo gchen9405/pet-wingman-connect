@@ -52,13 +52,10 @@ CREATE TABLE prompt_answers (
     prompt_id UUID NOT NULL REFERENCES prompts(id) ON DELETE CASCADE,
     answer_text TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     
-    -- Ensure owner_id references the correct table based on owner_type
-    CONSTRAINT valid_owner_reference CHECK (
-        (owner_type = 'human' AND owner_id IN (SELECT id FROM profiles)) OR
-        (owner_type = 'pet' AND owner_id IN (SELECT id FROM pets))
-    )
+    -- Note: owner_id validation will be handled by triggers instead of CHECK constraints
+    -- since PostgreSQL doesn't allow subqueries in CHECK constraints
 );
 
 -- Photos table for user and pet photos
@@ -68,13 +65,10 @@ CREATE TABLE photos (
     owner_id UUID NOT NULL,
     path TEXT NOT NULL,
     is_primary BOOLEAN DEFAULT false,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
     
-    -- Ensure owner_id references the correct table based on owner_type
-    CONSTRAINT valid_photo_owner_reference CHECK (
-        (owner_type = 'human' AND owner_id IN (SELECT id FROM profiles)) OR
-        (owner_type = 'pet' AND owner_id IN (SELECT id FROM pets))
-    )
+    -- Note: owner_id validation will be handled by triggers instead of CHECK constraints
+    -- since PostgreSQL doesn't allow subqueries in CHECK constraints
 );
 
 -- Likes table for user interactions
@@ -173,19 +167,19 @@ CREATE POLICY "Public prompt answers are viewable by everyone" ON prompt_answers
 CREATE POLICY "Users can insert prompt answers for their own profiles/pets" ON prompt_answers
     FOR INSERT WITH CHECK (
         (owner_type = 'human' AND owner_id = auth.uid()) OR
-        (owner_type = 'pet' AND owner_id IN (SELECT id FROM pets WHERE user_id = auth.uid()))
+        (owner_type = 'pet' AND EXISTS (SELECT 1 FROM pets WHERE id = owner_id AND user_id = auth.uid()))
     );
 
 CREATE POLICY "Users can update their own prompt answers" ON prompt_answers
     FOR UPDATE USING (
         (owner_type = 'human' AND owner_id = auth.uid()) OR
-        (owner_type = 'pet' AND owner_id IN (SELECT id FROM pets WHERE user_id = auth.uid()))
+        (owner_type = 'pet' AND EXISTS (SELECT 1 FROM pets WHERE id = owner_id AND user_id = auth.uid()))
     );
 
 CREATE POLICY "Users can delete their own prompt answers" ON prompt_answers
     FOR DELETE USING (
         (owner_type = 'human' AND owner_id = auth.uid()) OR
-        (owner_type = 'pet' AND owner_id IN (SELECT id FROM pets WHERE user_id = auth.uid()))
+        (owner_type = 'pet' AND EXISTS (SELECT 1 FROM pets WHERE id = owner_id AND user_id = auth.uid()))
     );
 
 -- Photos policies
@@ -195,19 +189,19 @@ CREATE POLICY "Public photos are viewable by everyone" ON photos
 CREATE POLICY "Users can insert photos for their own profiles/pets" ON photos
     FOR INSERT WITH CHECK (
         (owner_type = 'human' AND owner_id = auth.uid()) OR
-        (owner_type = 'pet' AND owner_id IN (SELECT id FROM pets WHERE user_id = auth.uid()))
+        (owner_type = 'pet' AND EXISTS (SELECT 1 FROM pets WHERE id = owner_id AND user_id = auth.uid()))
     );
 
 CREATE POLICY "Users can update their own photos" ON photos
     FOR UPDATE USING (
         (owner_type = 'human' AND owner_id = auth.uid()) OR
-        (owner_type = 'pet' AND owner_id IN (SELECT id FROM pets WHERE user_id = auth.uid()))
+        (owner_type = 'pet' AND EXISTS (SELECT 1 FROM pets WHERE id = owner_id AND user_id = auth.uid()))
     );
 
 CREATE POLICY "Users can delete their own photos" ON photos
     FOR DELETE USING (
         (owner_type = 'human' AND owner_id = auth.uid()) OR
-        (owner_type = 'pet' AND owner_id IN (SELECT id FROM pets WHERE user_id = auth.uid()))
+        (owner_type = 'pet' AND EXISTS (SELECT 1 FROM pets WHERE id = owner_id AND user_id = auth.uid()))
     );
 
 -- Likes policies
@@ -263,6 +257,34 @@ $$ language 'plpgsql';
 
 CREATE TRIGGER ensure_single_primary_photo_trigger BEFORE INSERT OR UPDATE ON photos
     FOR EACH ROW EXECUTE FUNCTION ensure_single_primary_photo();
+
+-- Function to validate owner_id references for prompt_answers and photos
+CREATE OR REPLACE FUNCTION validate_owner_reference()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Validate owner_id based on owner_type
+    IF NEW.owner_type = 'human' THEN
+        -- Check if owner_id exists in profiles table
+        IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = NEW.owner_id) THEN
+            RAISE EXCEPTION 'Invalid owner_id: % does not exist in profiles table', NEW.owner_id;
+        END IF;
+    ELSIF NEW.owner_type = 'pet' THEN
+        -- Check if owner_id exists in pets table
+        IF NOT EXISTS (SELECT 1 FROM pets WHERE id = NEW.owner_id) THEN
+            RAISE EXCEPTION 'Invalid owner_id: % does not exist in pets table', NEW.owner_id;
+        END IF;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Apply validation triggers
+CREATE TRIGGER validate_prompt_answers_owner_trigger BEFORE INSERT OR UPDATE ON prompt_answers
+    FOR EACH ROW EXECUTE FUNCTION validate_owner_reference();
+
+CREATE TRIGGER validate_photos_owner_trigger BEFORE INSERT OR UPDATE ON photos
+    FOR EACH ROW EXECUTE FUNCTION validate_owner_reference();
 
 -- ============================================================================
 -- STORAGE BUCKETS
