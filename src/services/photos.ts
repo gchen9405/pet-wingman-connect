@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { Photo } from '@/types';
 import { useAuthStore } from '@/stores/useAuthStore';
 
@@ -28,7 +29,10 @@ export const upload = async (file: File, { ownerType, ownerId }: { ownerType: 'h
         .from('pets')
         .select('user_id')
         .eq('id', ownerId)
-        .single();
+        .single() as {
+          data: Database['public']['Tables']['pets']['Row'] | null;
+          error: any;
+        };
       
       if (!pet || pet.user_id !== currentUser.id) {
         return { error: 'Unauthorized: Cannot upload photos for a pet you do not own' };
@@ -89,7 +93,10 @@ export const save = async (photoData: {
         .from('pets')
         .select('user_id')
         .eq('id', photoData.ownerId)
-        .single();
+        .single() as {
+          data: Database['public']['Tables']['pets']['Row'] | null;
+          error: any;
+        };
       
       if (!pet || pet.user_id !== currentUser.id) {
         return { error: 'Unauthorized: Cannot save photos for a pet you do not own' };
@@ -98,15 +105,15 @@ export const save = async (photoData: {
 
     // If setting as primary, unset other primary photos for the same owner
     if (photoData.isPrimary) {
-      await supabase
-        .from('photos')
+      await (supabase
+        .from('photos') as any)
         .update({ is_primary: false })
         .eq('owner_type', photoData.ownerType)
         .eq('owner_id', photoData.ownerId);
     }
 
-    const { data, error } = await supabase
-      .from('photos')
+    const { data, error } = await (supabase
+      .from('photos') as any)
       .insert({
         owner_type: photoData.ownerType,
         owner_id: photoData.ownerId,
@@ -114,7 +121,10 @@ export const save = async (photoData: {
         is_primary: photoData.isPrimary || false
       })
       .select()
-      .single();
+      .single() as {
+        data: Database['public']['Tables']['photos']['Row'] | null;
+        error: any;
+      };
 
     if (error) {
       return { error: error.message };
@@ -155,7 +165,10 @@ export const deletePhoto = async (photoId: string): Promise<{ error?: string }> 
         pets!owner_id(user_id)
       `)
       .eq('id', photoId)
-      .single();
+      .single() as {
+        data: any | null;
+        error: any;
+      };
 
     if (fetchError) {
       return { error: fetchError.message };

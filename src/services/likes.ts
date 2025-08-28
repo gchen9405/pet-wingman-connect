@@ -1,5 +1,6 @@
 import { LikeRequest, LikeResponse, Like } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
@@ -30,8 +31,8 @@ export const like = async (data: LikeRequest): Promise<LikeResponse> => {
     }
 
     // Insert the like
-    const { data: likeData, error: likeError } = await supabase
-      .from('likes')
+    const { data: likeData, error: likeError } = await (supabase
+      .from('likes') as any)
       .insert({
         from_user_id: currentUser.id,
         to_user_id: data.toUserId,
@@ -40,7 +41,10 @@ export const like = async (data: LikeRequest): Promise<LikeResponse> => {
         message: data.message
       })
       .select()
-      .single();
+      .single() as {
+        data: Database['public']['Tables']['likes']['Row'] | null;
+        error: any;
+      };
 
     if (likeError) {
       // Handle duplicate like error
@@ -56,7 +60,10 @@ export const like = async (data: LikeRequest): Promise<LikeResponse> => {
       .select('id')
       .eq('from_user_id', data.toUserId)
       .eq('to_user_id', currentUser.id)
-      .single();
+      .single() as {
+        data: Database['public']['Tables']['likes']['Row'] | null;
+        error: any;
+      };
 
     if (reciprocalError && reciprocalError.code !== 'PGRST116') {
       // Error other than "no rows found"
@@ -74,14 +81,17 @@ export const like = async (data: LikeRequest): Promise<LikeResponse> => {
       const userA = currentUser.id < data.toUserId ? currentUser.id : data.toUserId;
       const userB = currentUser.id < data.toUserId ? data.toUserId : currentUser.id;
 
-      const { data: matchData, error: matchError } = await supabase
-        .from('matches')
+      const { data: matchData, error: matchError } = await (supabase
+        .from('matches') as any)
         .insert({
           user_a: userA,
           user_b: userB
         })
         .select()
-        .single();
+        .single() as {
+          data: Database['public']['Tables']['matches']['Row'] | null;
+          error: any;
+        };
 
       if (matchError) {
         // If the match already exists, that's fine
@@ -94,7 +104,10 @@ export const like = async (data: LikeRequest): Promise<LikeResponse> => {
           .select('id')
           .eq('user_a', userA)
           .eq('user_b', userB)
-          .single();
+          .single() as {
+            data: Database['public']['Tables']['matches']['Row'] | null;
+            error: any;
+          };
         
         matchId = existingMatch?.id;
       } else {
@@ -164,7 +177,10 @@ export const fetchIncomingLikes = async (): Promise<Like[]> => {
         )
       `)
       .eq('to_user_id', currentUser.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }) as {
+        data: any[] | null;
+        error: any;
+      };
 
     if (error) {
       throw error;
@@ -230,7 +246,10 @@ export const fetchOutgoingLikes = async (): Promise<Like[]> => {
         )
       `)
       .eq('from_user_id', currentUser.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }) as {
+        data: any[] | null;
+        error: any;
+      };
 
     if (error) {
       throw error;

@@ -1,5 +1,6 @@
 import { User, Pet, PromptAnswer } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';

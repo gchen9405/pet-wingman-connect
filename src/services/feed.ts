@@ -1,5 +1,6 @@
 import { ProfileWithPet, User, Pet } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
@@ -111,7 +112,10 @@ export const fetchNextCards = async (page = 0, limit = 10): Promise<ProfileWithP
         created_at
       `)
       .neq('id', currentUser.id)
-      .range(page * limit, (page + 1) * limit - 1);
+      .range(page * limit, (page + 1) * limit - 1) as { 
+        data: Database['public']['Tables']['profiles']['Row'][] | null;
+        error: any;
+      };
 
     if (profilesError) {
       throw profilesError;
@@ -128,7 +132,10 @@ export const fetchNextCards = async (page = 0, limit = 10): Promise<ProfileWithP
     const { data: pets, error: petsError } = await supabase
       .from('pets')
       .select('*')
-      .in('user_id', profileIds);
+      .in('user_id', profileIds) as {
+        data: Database['public']['Tables']['pets']['Row'][] | null;
+        error: any;
+      };
 
     if (petsError) {
       throw petsError;
@@ -141,7 +148,10 @@ export const fetchNextCards = async (page = 0, limit = 10): Promise<ProfileWithP
     const { data: photos, error: photosError } = await supabase
       .from('photos')
       .select('*')
-      .in('owner_id', allOwnerIds);
+      .in('owner_id', allOwnerIds) as {
+        data: Database['public']['Tables']['photos']['Row'][] | null;
+        error: any;
+      };
 
     if (photosError) {
       throw photosError;
@@ -158,7 +168,10 @@ export const fetchNextCards = async (page = 0, limit = 10): Promise<ProfileWithP
         answer_text,
         prompts(text)
       `)
-      .in('owner_id', allOwnerIds);
+      .in('owner_id', allOwnerIds) as {
+        data: Database['public']['Tables']['prompt_answers']['Row'][] | null;
+        error: any;
+      };
 
     if (promptAnswersError) {
       throw promptAnswersError;
