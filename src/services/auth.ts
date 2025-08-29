@@ -144,16 +144,9 @@ export const useSession = () => {
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('Initial session check:', !!session);
-      setAuth(session?.user ?? null, session);
-      
-      // Ensure profile exists for existing session
-      if (session?.user) {
-        await ensureUserProfile(session.user);
-      }
-    });
+    // With persistSession: false, there won't be any existing session to restore
+    // Start with no session - users must always log in fresh
+    setAuth(null, null);
 
     return () => subscription.unsubscribe();
   }, [setAuth, setLoading]);
