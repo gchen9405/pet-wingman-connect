@@ -119,17 +119,22 @@ export const signOut = async () => {
 };
 
 export const useSession = () => {
-  const { user, session, setAuth, clearAuth } = useAuthStore();
+  const { user, session, isLoading, setAuth, setLoading, clearAuth } = useAuthStore();
 
   useEffect(() => {
     if (USE_MOCKS) {
       // For mock mode, simulate being logged out initially
+      setAuth(null, null);
       return;
     }
+
+    // Set loading to true while we check auth
+    setLoading(true);
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, !!session);
         setAuth(session?.user ?? null, session);
         
         // Handle profile creation on sign-in or when user confirms email
@@ -141,6 +146,7 @@ export const useSession = () => {
 
     // THEN check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('Initial session check:', !!session);
       setAuth(session?.user ?? null, session);
       
       // Ensure profile exists for existing session
@@ -150,7 +156,7 @@ export const useSession = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [setAuth]);
+  }, [setAuth, setLoading]);
 
-  return { user, session, isLoading: false };
+  return { user, session, isLoading };
 };

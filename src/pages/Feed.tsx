@@ -84,11 +84,35 @@ const Feed = () => {
 
   if (!currentCard) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">No more profiles</h2>
-          <p className="text-muted-foreground">Check back later for new matches!</p>
+      <div className="min-h-screen bg-background pb-16">
+        <div className="max-w-sm mx-auto space-y-4 p-4">
+          {/* Header with sign out button */}
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold">Discover</h1>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSignOut}
+              className="gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
+
+          {/* No profiles message */}
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center space-y-4">
+              <h2 className="text-xl font-semibold">No more profiles</h2>
+              <p className="text-muted-foreground">Check back later for new matches!</p>
+              <p className="text-sm text-muted-foreground">
+                Try completing your profile to attract more matches
+              </p>
+            </div>
+          </div>
         </div>
+
+        <BottomTabBar />
       </div>
     );
   }
