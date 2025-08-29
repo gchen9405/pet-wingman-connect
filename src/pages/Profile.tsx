@@ -8,6 +8,7 @@ import { TopNav } from '@/components/TopNav';
 import { BottomTabBar } from '@/components/BottomTabBar';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { getSimpleProfile, updateSimpleProfile, SimpleUser } from '@/services/simpleProfile';
+import { getUserPets, createPet, updatePet, deletePet, SimplePet } from '@/services/simplePet';
 import { useToast } from '@/hooks/use-toast';
 
 const Profile = () => {
@@ -22,6 +23,19 @@ const Profile = () => {
     age: '',
     height: '',
     sexuality: '',
+    bio: ''
+  });
+
+  // Pet-related state
+  const [pets, setPets] = useState<SimplePet[]>([]);
+  const [petLoading, setPetLoading] = useState(false);
+  const [petEditing, setPetEditing] = useState<string | null>(null); // petId or 'new'
+  const [petSaving, setPetSaving] = useState(false);
+  const [petFormData, setPetFormData] = useState({
+    name: '',
+    age: '',
+    weight: '',
+    breed: '',
     bio: ''
   });
 
@@ -147,6 +161,45 @@ const Profile = () => {
     loadProfile();
   }, [authLoading, authUser?.id, authUser?.email, toast]);
 
+  // Load pets data
+  useEffect(() => {
+    const loadPets = async () => {
+      if (authLoading || !authUser?.id) {
+        return;
+      }
+
+      console.log('Loading pets for user:', authUser.id);
+      setPetLoading(true);
+
+      try {
+        // Use quick fallback for pets too
+        const petsPromise = getUserPets(authUser.id);
+        const quickFallback = new Promise<{ pets?: SimplePet[]; error?: string }>((resolve) => {
+          setTimeout(() => {
+            console.log('Pets quick fallback - using empty list');
+            resolve({ pets: [] });
+          }, 2000);
+        });
+
+        const { pets: userPets, error } = await Promise.race([petsPromise, quickFallback]);
+
+        if (error) {
+          console.error('Pets error:', error);
+          setPets([]);
+        } else {
+          setPets(userPets || []);
+        }
+      } catch (error) {
+        console.error('Error loading pets:', error);
+        setPets([]);
+      }
+
+      setPetLoading(false);
+    };
+
+    loadPets();
+  }, [authLoading, authUser?.id]);
+
   const handleSave = async () => {
     if (!authUser?.id) return;
 
@@ -189,6 +242,110 @@ const Profile = () => {
       });
     }
     setEditing(false);
+  };
+
+  // Pet management functions
+  const handlePetSave = async () => {
+    if (!authUser?.id) return;
+
+    setPetSaving(true);
+
+    try {
+      if (petEditing === 'new') {
+        // Create new pet
+        const { pet, error } = await createPet(authUser.id, {
+          name: petFormData.name,
+          age: petFormData.age ? parseInt(petFormData.age) : undefined,
+          weight: petFormData.weight,
+          breed: petFormData.breed,
+          bio: petFormData.bio
+        });
+
+        if (error) {
+          toast({
+            title: 'Error',
+            description: 'Failed to create pet profile',
+            variant: 'destructive',
+          });
+        } else if (pet) {
+          setPets([...pets, pet]);
+          setPetEditing(null);
+          setPetFormData({ name: '', age: '', weight: '', breed: '', bio: '' });
+          toast({
+            title: 'Success',
+            description: 'Pet profile created successfully!',
+          });
+        }
+      } else if (petEditing) {
+        // Update existing pet
+        const { pet, error } = await updatePet(petEditing, {
+          name: petFormData.name,
+          age: petFormData.age ? parseInt(petFormData.age) : undefined,
+          weight: petFormData.weight,
+          breed: petFormData.breed,
+          bio: petFormData.bio
+        });
+
+        if (error) {
+          toast({
+            title: 'Error',
+            description: 'Failed to update pet profile',
+            variant: 'destructive',
+          });
+        } else if (pet) {
+          setPets(pets.map(p => p.id === pet.id ? pet : p));
+          setPetEditing(null);
+          toast({
+            title: 'Success',
+            description: 'Pet profile updated successfully!',
+          });
+        }
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Something went wrong',
+        variant: 'destructive',
+      });
+    }
+
+    setPetSaving(false);
+  };
+
+  const handlePetEdit = (pet: SimplePet) => {
+    setPetFormData({
+      name: pet.name,
+      age: pet.age?.toString() || '',
+      weight: pet.weight || '',
+      breed: pet.breed || '',
+      bio: pet.bio || ''
+    });
+    setPetEditing(pet.id);
+  };
+
+  const handlePetCancel = () => {
+    setPetEditing(null);
+    setPetFormData({ name: '', age: '', weight: '', breed: '', bio: '' });
+  };
+
+  const handlePetDelete = async (petId: string) => {
+    if (!confirm('Are you sure you want to delete this pet profile?')) return;
+
+    const { error } = await deletePet(petId);
+    
+    if (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete pet profile',
+        variant: 'destructive',
+      });
+    } else {
+      setPets(pets.filter(p => p.id !== petId));
+      toast({
+        title: 'Success',
+        description: 'Pet profile deleted successfully',
+      });
+    }
   };
 
   // Show auth loading first
@@ -338,15 +495,194 @@ const Profile = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Your Pet</CardTitle>
+            <CardTitle>Your Pets</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <p className="text-muted-foreground">Pet profile management coming soon!</p>
-              <Button variant="outline" disabled>
-                Add Pet Profile
-              </Button>
-            </div>
+            {petLoading ? (
+              <p className="text-muted-foreground">Loading pets...</p>
+            ) : (
+              <div className="space-y-4">
+                {/* Existing pets */}
+                {pets.length > 0 && (
+                  <div className="space-y-4">
+                    {pets.map((pet) => (
+                      <div key={pet.id} className="border rounded-lg p-4">
+                        {petEditing === pet.id ? (
+                          /* Edit form for existing pet */
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="petName">Pet Name</Label>
+                              <Input
+                                id="petName"
+                                value={petFormData.name}
+                                onChange={(e) => setPetFormData({ ...petFormData, name: e.target.value })}
+                                placeholder="Your pet's name"
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="petAge">Age</Label>
+                              <Input
+                                id="petAge"
+                                type="number"
+                                value={petFormData.age}
+                                onChange={(e) => setPetFormData({ ...petFormData, age: e.target.value })}
+                                placeholder="Your pet's age"
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="petWeight">Weight</Label>
+                              <Input
+                                id="petWeight"
+                                value={petFormData.weight}
+                                onChange={(e) => setPetFormData({ ...petFormData, weight: e.target.value })}
+                                placeholder="e.g., 15 lbs"
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="petBreed">Breed</Label>
+                              <Input
+                                id="petBreed"
+                                value={petFormData.breed}
+                                onChange={(e) => setPetFormData({ ...petFormData, breed: e.target.value })}
+                                placeholder="e.g., Golden Retriever"
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="petBio">Bio</Label>
+                              <Textarea
+                                id="petBio"
+                                value={petFormData.bio}
+                                onChange={(e) => setPetFormData({ ...petFormData, bio: e.target.value })}
+                                placeholder="Tell others about your pet..."
+                                rows={3}
+                              />
+                            </div>
+
+                            <div className="flex gap-2">
+                              <Button onClick={handlePetSave} disabled={petSaving}>
+                                {petSaving ? 'Saving...' : 'Save Changes'}
+                              </Button>
+                              <Button variant="outline" onClick={handlePetCancel} disabled={petSaving}>
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* Display existing pet */
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-start">
+                              <h4 className="font-semibold">{pet.name}</h4>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handlePetEdit(pet)}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handlePetDelete(pet.id)}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
+                            <p><strong>Age:</strong> {pet.age || 'Not set'}</p>
+                            <p><strong>Weight:</strong> {pet.weight || 'Not set'}</p>
+                            <p><strong>Breed:</strong> {pet.breed || 'Not set'}</p>
+                            <p><strong>Bio:</strong> {pet.bio || 'Not set'}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add new pet form */}
+                {petEditing === 'new' ? (
+                  <div className="border rounded-lg p-4 space-y-4">
+                    <h4 className="font-semibold">Add New Pet</h4>
+                    
+                    <div>
+                      <Label htmlFor="newPetName">Pet Name</Label>
+                      <Input
+                        id="newPetName"
+                        value={petFormData.name}
+                        onChange={(e) => setPetFormData({ ...petFormData, name: e.target.value })}
+                        placeholder="Your pet's name"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="newPetAge">Age</Label>
+                      <Input
+                        id="newPetAge"
+                        type="number"
+                        value={petFormData.age}
+                        onChange={(e) => setPetFormData({ ...petFormData, age: e.target.value })}
+                        placeholder="Your pet's age"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="newPetWeight">Weight</Label>
+                      <Input
+                        id="newPetWeight"
+                        value={petFormData.weight}
+                        onChange={(e) => setPetFormData({ ...petFormData, weight: e.target.value })}
+                        placeholder="e.g., 15 lbs"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="newPetBreed">Breed</Label>
+                      <Input
+                        id="newPetBreed"
+                        value={petFormData.breed}
+                        onChange={(e) => setPetFormData({ ...petFormData, breed: e.target.value })}
+                        placeholder="e.g., Golden Retriever"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="newPetBio">Bio</Label>
+                      <Textarea
+                        id="newPetBio"
+                        value={petFormData.bio}
+                        onChange={(e) => setPetFormData({ ...petFormData, bio: e.target.value })}
+                        placeholder="Tell others about your pet..."
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button onClick={handlePetSave} disabled={petSaving}>
+                        {petSaving ? 'Creating...' : 'Create Pet Profile'}
+                      </Button>
+                      <Button variant="outline" onClick={handlePetCancel} disabled={petSaving}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Add pet button */
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setPetEditing('new')}
+                    disabled={petEditing !== null}
+                  >
+                    Add Pet Profile
+                  </Button>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
