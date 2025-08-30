@@ -5,12 +5,14 @@ import { BottomTabBar } from '@/components/BottomTabBar';
 import { MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useNavigate } from 'react-router-dom';
 import { Match } from '@/types';
 
 const Matches = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuthStore();
+  const navigate = useNavigate();
 
   // Helper function to fetch user names
   const fetchUserName = async (userId: string): Promise<string> => {
@@ -131,7 +133,10 @@ const Matches = () => {
                     </div>
                     
                     <div className="mt-3 pt-3 border-t">
-                      <button className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                      <button 
+                        onClick={() => navigate(`/messages/${match.id}`)}
+                        className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                      >
                         Start Conversation
                       </button>
                     </div>
