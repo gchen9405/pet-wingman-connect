@@ -123,30 +123,27 @@ export const useSession = () => {
 
   useEffect(() => {
     if (USE_MOCKS) {
-      // For mock mode, simulate being logged out initially
       setAuth(null, null);
       return;
     }
 
-    // Set loading to true while we check auth
     setLoading(true);
 
-    // Set up auth state listener FIRST
+    // Simple auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change:', event, !!session);
+      (event, session) => {
+        console.log('Auth event:', event, session ? 'Has session' : 'No session');
         setAuth(session?.user ?? null, session);
-        
-        // Handle profile creation on sign-in or when user confirms email
-        if (event === 'SIGNED_IN' && session?.user) {
-          await ensureUserProfile(session.user);
-        }
+        setLoading(false);
       }
     );
 
-    // With persistSession: false, there won't be any existing session to restore
-    // Start with no session - users must always log in fresh
-    setAuth(null, null);
+    // Simple session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session ? 'Found' : 'Not found');
+      setAuth(session?.user ?? null, session);
+      setLoading(false);
+    });
 
     return () => subscription.unsubscribe();
   }, [setAuth, setLoading]);

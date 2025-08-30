@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
 import { Photo } from '@/types';
-import { upload, save, deletePhoto } from '@/services/photos';
+import { upload, save, deletePhoto, getPublicUrl } from '@/services/photos';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, X, Star, Camera, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -51,6 +51,10 @@ export const PhotoUploader = ({
   };
 
   const handleFiles = useCallback(async (files: FileList) => {
+    console.log('🎯 PhotoUploader.handleFiles called');
+    console.log('Files received:', files.length);
+    console.log('Current ownerType:', ownerType, 'ownerId:', ownerId);
+    
     const fileArray = Array.from(files);
     const newUploadingFiles: UploadingFile[] = [];
 
@@ -98,7 +102,7 @@ export const PhotoUploader = ({
           );
         }, 200);
 
-        const uploadResult = await upload(uploadingFile.file);
+        const uploadResult = await upload(uploadingFile.file, { ownerType, ownerId });
         clearInterval(progressInterval);
 
         if (uploadResult.error) {
@@ -113,6 +117,21 @@ export const PhotoUploader = ({
         }
 
         if (uploadResult.path) {
+          // Set progress to 95% after upload completes
+          setUploadingFiles(prev => 
+            prev.map(f => 
+              f.id === uploadingFile.id 
+                ? { ...f, progress: 95 }
+                : f
+            )
+          );
+
+          console.log('File uploaded successfully, saving metadata...', {
+            ownerType,
+            ownerId,
+            path: uploadResult.path
+          });
+
           const saveResult = await save({
             ownerType,
             ownerId,
@@ -121,21 +140,41 @@ export const PhotoUploader = ({
           });
 
           if (saveResult.photo) {
+            // Set progress to 100% when fully complete
+            setUploadingFiles(prev => 
+              prev.map(f => 
+                f.id === uploadingFile.id 
+                  ? { ...f, progress: 100 }
+                  : f
+              )
+            );
+
+            // Give a brief moment to show 100% then remove
+            setTimeout(() => {
+              setUploadingFiles(prev => prev.filter(f => f.id !== uploadingFile.id));
+            }, 500);
+
             onPhotosChange([...photos, saveResult.photo]);
-            setUploadingFiles(prev => prev.filter(f => f.id !== uploadingFile.id));
             
             toast({
               title: 'Photo uploaded',
               description: 'Your photo has been added successfully',
             });
           } else {
+            console.error('Save result error:', saveResult.error);
             setUploadingFiles(prev => 
               prev.map(f => 
                 f.id === uploadingFile.id 
-                  ? { ...f, error: saveResult.error || 'Save failed' }
+                  ? { ...f, error: saveResult.error || 'Failed to save photo metadata' }
                   : f
               )
             );
+            
+            toast({
+              title: 'Upload Error',
+              description: saveResult.error || 'Failed to save photo metadata',
+              variant: 'destructive',
+            });
           }
         }
       } catch (error) {
@@ -253,7 +292,7 @@ export const PhotoUploader = ({
               className="relative group aspect-square"
             >
               <img
-                src={photo.path.startsWith('/') ? `/api/placeholder/400/400?text=${encodeURIComponent(photo.path)}` : photo.path}
+                src={getPublicUrl(photo.path)}
                 alt="Uploaded photo"
                 className="w-full h-full object-cover rounded-lg"
               />

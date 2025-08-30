@@ -1,23 +1,35 @@
 import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/integrations/supabase/types';
 import { Photo } from '@/types';
 import { useAuthStore } from '@/stores/useAuthStore';
+
+// Use the main client for consistency
+// const storageClient = createClient<Database>(
+//   import.meta.env.VITE_SUPABASE_URL!,
+//   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY!
+// );
 
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export const upload = async (file: File, { ownerType, ownerId }: { ownerType: 'human' | 'pet'; ownerId: string }): Promise<{ path?: string; error?: string }> => {
+export const upload = async (file: File, options?: { ownerType: 'human' | 'pet'; ownerId: string }): Promise<{ path?: string; error?: string }> => {
+  console.log('📤 Upload:', file.name);
+  
   if (USE_MOCKS) {
-    await delay(2000); // Simulate upload time
+    await delay(2000);
     return { path: `/mock/photos/${file.name}` };
   }
 
   try {
+    // Simple auth check
     const currentUser = useAuthStore.getState().user;
     if (!currentUser) {
-      return { error: 'User not authenticated' };
+      return { error: 'Please log in to upload photos' };
     }
+
+    const { ownerType = 'human', ownerId = currentUser.id } = options || {};
 
     // Verify ownership
     if (ownerType === 'human' && ownerId !== currentUser.id) {
@@ -40,20 +52,20 @@ export const upload = async (file: File, { ownerType, ownerId }: { ownerType: 'h
     }
 
     const fileExt = file.name.split('.').pop();
-    const fileName = `${currentUser.id}/${ownerType}/${ownerId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const fileName = `${currentUser.id}/${ownerType}-${ownerId}-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
+    // Simple upload
+    console.log('📁 Uploading:', fileName);
     const { data, error } = await supabase.storage
       .from('photos')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-        contentType: file.type
-      });
-
+      .upload(fileName, file);
+    
     if (error) {
+      console.error('❌ Upload failed:', error.message);
       return { error: error.message };
     }
 
+    console.log('✅ Upload successful');
     return { path: data.path };
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Upload failed' };
@@ -78,9 +90,11 @@ export const save = async (photoData: {
   }
 
   try {
+    console.log('💾 Saving photo metadata');
+    
     const currentUser = useAuthStore.getState().user;
     if (!currentUser) {
-      return { error: 'User not authenticated' };
+      return { error: 'Please log in to save photos' };
     }
 
     // Verify ownership
@@ -89,14 +103,17 @@ export const save = async (photoData: {
     }
     
     if (photoData.ownerType === 'pet') {
-      const { data: pet } = await supabase
+      console.log('Verifying pet ownership for pet ID:', photoData.ownerId);
+      const { data: pet, error: petError } = await supabase
         .from('pets')
         .select('user_id')
         .eq('id', photoData.ownerId)
-        .single() as {
-          data: Database['public']['Tables']['pets']['Row'] | null;
-          error: any;
-        };
+        .single();
+      
+      if (petError) {
+        console.error('Pet verification error:', petError);
+        return { error: `Pet verification failed: ${petError.message}` };
+      }
       
       if (!pet || pet.user_id !== currentUser.id) {
         return { error: 'Unauthorized: Cannot save photos for a pet you do not own' };
@@ -104,16 +121,9 @@ export const save = async (photoData: {
     }
 
     // If setting as primary, unset other primary photos for the same owner
-    if (photoData.isPrimary) {
-      await (supabase
-        .from('photos') as any)
-        .update({ is_primary: false })
-        .eq('owner_type', photoData.ownerType)
-        .eq('owner_id', photoData.ownerId);
-    }
-
-    const { data, error } = await (supabase
-      .from('photos') as any)
+    // Simple database insert
+    const { data, error } = await supabase
+      .from('photos')
       .insert({
         owner_type: photoData.ownerType,
         owner_id: photoData.ownerId,
@@ -121,15 +131,15 @@ export const save = async (photoData: {
         is_primary: photoData.isPrimary || false
       })
       .select()
-      .single() as {
-        data: Database['public']['Tables']['photos']['Row'] | null;
-        error: any;
-      };
+      .single();
 
     if (error) {
+      console.error('❌ Save failed:', error.message);
       return { error: error.message };
     }
 
+    console.log('✅ Save successful');
+    
     const photo: Photo = {
       id: data.id,
       ownerType: data.owner_type as 'human' | 'pet',

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Photo } from '@/types';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getPublicUrl } from '@/services/photos';
 
 interface PhotoCarouselProps {
   photos: Photo[];
@@ -40,7 +41,7 @@ export const PhotoCarousel = ({ photos }: PhotoCarouselProps) => {
           className="absolute inset-0"
         >
           <img
-            src={currentPhoto.path.startsWith('/') ? `/api/placeholder/400/600?text=${encodeURIComponent(currentPhoto.path)}` : currentPhoto.path}
+            src={getPublicUrl(currentPhoto.path)}
             alt="Profile"
             className="w-full h-full object-cover"
           />

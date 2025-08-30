@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,9 +6,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { TopNav } from '@/components/TopNav';
 import { BottomTabBar } from '@/components/BottomTabBar';
+import { PhotoUploader } from '@/components/PhotoUploader';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { getSimpleProfile, updateSimpleProfile, SimpleUser } from '@/services/simpleProfile';
 import { getUserPets, createPet, updatePet, deletePet, SimplePet } from '@/services/simplePet';
+import { Photo } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 const Profile = () => {
@@ -26,6 +29,10 @@ const Profile = () => {
     bio: ''
   });
 
+  // Photo-related state
+  const [userPhotos, setUserPhotos] = useState<Photo[]>([]);
+  const [petPhotos, setPetPhotos] = useState<Record<string, Photo[]>>({});
+
   // Pet-related state
   const [pets, setPets] = useState<SimplePet[]>([]);
   const [petLoading, setPetLoading] = useState(false);
@@ -38,6 +45,60 @@ const Profile = () => {
     breed: '',
     bio: ''
   });
+
+  // Load photos for user and pets
+  const loadPhotos = useCallback(async () => {
+    if (!authUser) return;
+
+    try {
+      // Load user photos
+      const { data: userPhotoData } = await supabase
+        .from('photos')
+        .select('*')
+        .eq('owner_type', 'human')
+        .eq('owner_id', authUser.id)
+        .order('created_at', { ascending: false });
+
+      if (userPhotoData) {
+        const photos: Photo[] = userPhotoData.map(p => ({
+          id: p.id,
+          ownerType: p.owner_type as 'human' | 'pet',
+          ownerId: p.owner_id,
+          path: p.path,
+          isPrimary: p.is_primary,
+          createdAt: p.created_at
+        }));
+        setUserPhotos(photos);
+      }
+
+      // Load pet photos for each pet
+      const { data: petPhotoData } = await supabase
+        .from('photos')
+        .select('*')
+        .eq('owner_type', 'pet')
+        .order('created_at', { ascending: false });
+
+      if (petPhotoData) {
+        const photosByPet: Record<string, Photo[]> = {};
+        petPhotoData.forEach(p => {
+          if (!photosByPet[p.owner_id]) {
+            photosByPet[p.owner_id] = [];
+          }
+          photosByPet[p.owner_id].push({
+            id: p.id,
+            ownerType: p.owner_type as 'human' | 'pet',
+            ownerId: p.owner_id,
+            path: p.path,
+            isPrimary: p.is_primary,
+            createdAt: p.created_at
+          });
+        });
+        setPetPhotos(photosByPet);
+      }
+    } catch (error) {
+      console.error('Error loading photos:', error);
+    }
+  }, [authUser]);
 
   // Load profile data
   useEffect(() => {
@@ -156,6 +217,9 @@ const Profile = () => {
       
       setLoading(false);
       console.log('Profile loading complete');
+      
+      // Load photos after profile is loaded
+      loadPhotos();
     };
 
     loadProfile();
@@ -460,6 +524,17 @@ const Profile = () => {
                   />
                 </div>
 
+                <div>
+                  <Label>Your Photos</Label>
+                  <PhotoUploader
+                    photos={userPhotos}
+                    ownerType="human"
+                    ownerId={authUser?.id || ''}
+                    onPhotosChange={setUserPhotos}
+                    maxPhotos={6}
+                  />
+                </div>
+
                 <div className="flex gap-2">
                   <Button onClick={handleSave} disabled={saving}>
                     {saving ? 'Saving...' : 'Save Changes'}
@@ -562,6 +637,17 @@ const Profile = () => {
                               />
                             </div>
 
+                            <div>
+                              <Label>Pet Photos</Label>
+                              <PhotoUploader
+                                photos={petPhotos[pet.id] || []}
+                                ownerType="pet"
+                                ownerId={pet.id}
+                                onPhotosChange={(photos) => setPetPhotos(prev => ({ ...prev, [pet.id]: photos }))}
+                                maxPhotos={6}
+                              />
+                            </div>
+
                             <div className="flex gap-2">
                               <Button onClick={handlePetSave} disabled={petSaving}>
                                 {petSaving ? 'Saving...' : 'Save Changes'}
@@ -660,6 +746,15 @@ const Profile = () => {
                         placeholder="Tell others about your pet..."
                         rows={3}
                       />
+                    </div>
+
+                    <div>
+                      <Label>Pet Photos</Label>
+                      <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
+                        <p className="text-muted-foreground">
+                          Photos can be added after creating the pet profile
+                        </p>
+                      </div>
                     </div>
 
                     <div className="flex gap-2">
