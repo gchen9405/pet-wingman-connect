@@ -2,7 +2,9 @@
 
 ## Project info
 
-exactly what it sounds like it's a two man with your cat. Video is here: 
+exactly what it sounds like it's a two man with your cat. [Video demo here](https://youtu.be/frbZMkXZdPI)
+
+Please note the vid is a little confusing since I'm logging in as multiple different users to demo the auth, matching, and liking configurations. For extra context, I first logged in as myself to show the profile creation (I skipped on a pic upload bc I didn't have one on hand, but as you can see from the feed of other profiles, it is entirely functional) and sent a like to my friend Aronne (note that all profiles are entirely live and integrated into the Supabase SQL tables) to showcase the auth and the likes. I then logged in Aronne and my other friend Michael (who I previously matched during dev to test matching features) to highlight the matching features and the messaging system (the previous messages already in their convo history are from dev testing). Hope this helps!  
 
 ### Database Schema
 

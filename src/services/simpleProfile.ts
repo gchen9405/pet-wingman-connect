@@ -31,7 +31,7 @@ export const getSimpleProfile = async (userId: string): Promise<{ user?: SimpleU
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
     
     // Add our own timeout to the query
     const timeoutPromise = new Promise((_, reject) => {
