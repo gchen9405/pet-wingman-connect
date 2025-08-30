@@ -18,12 +18,15 @@ const Likes = () => {
   // Helper function to fetch user names
   const fetchUserName = async (userId: string): Promise<string> => {
     try {
-      const { data: profile } = await supabase
+      console.log('Fetching user name for:', userId);
+      const { data: profile, error } = await supabase
         .from('profiles')
-        .select('name')
+        .select('display_name')
         .eq('id', userId)
         .single();
-      return profile?.name || 'Unknown User';
+      
+      console.log('Profile fetch result:', { profile, error });
+      return profile?.display_name || 'Unknown User';
     } catch (error) {
       console.error('Error fetching user name:', error);
       return 'Unknown User';
