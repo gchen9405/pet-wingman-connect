@@ -31,6 +31,14 @@ export const like = async (data: LikeRequest): Promise<LikeResponse> => {
     }
 
     // Insert the like
+    console.log('🔥 Attempting to insert like:', {
+      from_user_id: currentUser.id,
+      to_user_id: data.toUserId,
+      target_type: data.targetType,
+      target_id: data.targetId,
+      message: data.message
+    });
+    
     const { data: likeData, error: likeError } = await (supabase
       .from('likes') as any)
       .insert({
@@ -45,6 +53,8 @@ export const like = async (data: LikeRequest): Promise<LikeResponse> => {
         data: Database['public']['Tables']['likes']['Row'] | null;
         error: any;
       };
+
+    console.log('🔥 Like insert result:', { likeData, likeError });
 
     if (likeError) {
       // Handle duplicate like error

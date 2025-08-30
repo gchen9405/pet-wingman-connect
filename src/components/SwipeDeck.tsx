@@ -71,10 +71,23 @@ export const SwipeDeck = ({ cards, currentIndex, onLike, onPass }: SwipeDeckProp
         targetId: currentCard.user.id, // Simplified for demo
       });
 
-      if (response.matched) {
+      if (response.ok) {
+        if (response.matched) {
+          toast({
+            title: 'It\'s a Match! 🎉',
+            description: `You and ${currentCard.user.displayName} liked each other!`,
+          });
+        } else {
+          toast({
+            title: 'Like sent! 💕',
+            description: `You liked ${currentCard.user.displayName}`,
+          });
+        }
+      } else {
         toast({
-          title: 'It\'s a Match! 🎉',
-          description: `You and ${currentCard.user.displayName} liked each other!`,
+          title: 'Error',
+          description: response.error || 'Something went wrong',
+          variant: 'destructive',
         });
       }
 

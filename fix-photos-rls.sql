@@ -94,3 +94,52 @@ CREATE POLICY "Users can delete their own photos" ON photos
 -- Bucket: photos
 -- Policy name: Users can delete photos
 -- Policy: bucket_id = 'photos' AND auth.uid() IS NOT NULL AND (storage.foldername(name))[1] = auth.uid()::text
+
+-- ============================================
+-- LIKES AND MATCHES RLS POLICIES
+-- ============================================
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can insert their own likes" ON likes;
+DROP POLICY IF EXISTS "Users can view likes they sent or received" ON likes;
+DROP POLICY IF EXISTS "Users can delete their own likes" ON likes;
+DROP POLICY IF EXISTS "Users can view their matches" ON matches;
+
+-- Likes table policies
+CREATE POLICY "Users can insert their own likes" ON likes
+  FOR INSERT
+  WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    from_user_id = auth.uid()
+  );
+
+CREATE POLICY "Users can view likes they sent or received" ON likes
+  FOR SELECT
+  USING (
+    auth.uid() IS NOT NULL AND
+    (from_user_id = auth.uid() OR to_user_id = auth.uid())
+  );
+
+CREATE POLICY "Users can delete their own likes" ON likes
+  FOR DELETE
+  USING (
+    auth.uid() IS NOT NULL AND
+    from_user_id = auth.uid()
+  );
+
+-- Matches table policies
+CREATE POLICY "Users can view their matches" ON matches
+  FOR SELECT
+  USING (
+    auth.uid() IS NOT NULL AND
+    (user_a = auth.uid() OR user_b = auth.uid())
+  );
+
+CREATE POLICY "System can insert matches" ON matches
+  FOR INSERT
+  WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    (user_a = auth.uid() OR user_b = auth.uid())
+  );
+
+-- Note: Matches are created by the application when mutual likes occur
