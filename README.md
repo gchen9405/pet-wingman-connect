@@ -2,7 +2,7 @@
 
 ## Project info
 
-exactly what it sounds like it's a two man with your cat. Basically, this is a Hinge-style dating app where the main differentiator is that each profile has a section for you and also a section for your pet. It has the same liking, matching, and messaging capabilities that Hinge does. Has working auth and is hooked up to Supabase backend for data storage. I spent around 5 hours developing this project. pls ignore my bald spot in the video also i was talking kinda fast so lmk if theres anything yall didnt catch [Video demo here](https://youtu.be/Ebxj7s_Yr7s)
+exactly what it sounds like it's a two man with your cat. Basically, this is a Hinge-style dating app where the main differentiator is that each profile has a section for you and also a section for your pet. It has the same liking, matching, and messaging capabilities that Hinge does. Has working auth and is hooked up to Supabase backend for data storage. I spent around 5 hours developing this project. pls ignore my bald spot in the video also i was talking kinda fast so lmk if theres anything yall didnt catch [Video demo here](https://youtu.be/w4HP0bsACes)
 
 ### Database Schema
 
