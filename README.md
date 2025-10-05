@@ -1,4 +1,4 @@
-# Two man with your pet
+# Two man with your pet (application for Penn Spark Red Team) 
 
 ## Project info
 
